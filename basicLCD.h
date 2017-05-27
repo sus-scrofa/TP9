@@ -1,4 +1,5 @@
 #include <ftd2xx.h>
+#include <iostream>
 
 struct cursorPosition
 {
@@ -18,7 +19,9 @@ public:
 	*
 	* cadd =1 (cursor address) (ver NOTA 1)
 	*=====================================================*/
-	basicLCD();
+	basicLCD() 
+	{
+	};
 
 	/*=====================================================
 	* Name: ~basicLCD
@@ -27,7 +30,10 @@ public:
 	* que se hubiera tomado de forma de evitar
 	* "resources leak".
 	*=====================================================*/
-	virtual ~basicLCD() = 0;
+	virtual ~basicLCD() 
+	{
+	
+	};
 
 	/*=====================================================
 	* Name: lcdInitOk
@@ -72,7 +78,7 @@ public:
 
 	/*=====================================================
 	* Name: operator<<()
-	* Entra: Un carácter
+	* Entra: Un caracter
 	* Resulta: Pone el carácter en la posición actual
 	* del cursor del display y avanza el cursor a la próxima
 	* posición respetando el gap (si el carácter no es imprimible
@@ -84,6 +90,21 @@ public:
 	* lcd << ‘a’ << ‘b’ << ‘c’;
 	*=====================================================*/
 	virtual basicLCD& operator<<(const unsigned char c) = 0;
+
+	/*=====================================================
+	* Name: operator<<()
+	* Entra: Una cadena de caracteres NULL terminated
+	* Resulta: imprime la cadena de caracteres en la posición actual
+	* del cursor y avanza el cursor al final de la cadena respetando
+	* el gap (si algún carácter no es imprimible lo ignora). Si recibe una
+	* cadena de más de 32 caracteres, muestra los últimos 32 en el display.
+	* Modifica: (cadd)
+	* Devuelve en su nombre una referencia a un basicLCD que permite
+	* encascar la función:
+	* basicLCD lcd;
+	* lcd << “Hola” << “ “ << “Mundo”;
+	*=====================================================*/
+	virtual basicLCD& operator<<(const unsigned char * c) = 0;
 
 	/*=====================================================
 	* Name: lcdMoveCursorUp
@@ -153,6 +174,8 @@ public:
 	*=====================================================*/
 	virtual cursorPosition lcdGetCursorPosition() = 0;
 
+protected:
+
 	/*=====================================================
 	* Name: lcdUpdateCursor ver NOTA 2
 	* Entra: -
@@ -166,20 +189,17 @@ public:
 	* para cadd. Este nuevo valor de cadd deberá ser transferido
 	* al cursor del display para poder sincronizar ambos.
 	*=====================================================*/
-	virtual void lcdUpdateCursor() = 0;	//TODO: PASAR A PRIVATE
+	virtual void lcdUpdateCursor() {};
 
-private:
-		/*=====================================================
-		* Nota 1: cadd (cursor address) es una variable
-		* que contiene la dirección actual del cursor en el
-		* display+1. Esta variable es necesaria pues no podemos
-		* leer el LCD para saber dónde está el cursor. Mediante
-		* la funciones como lcdClear () o lcdSetCursorPosition()
-		* podemos poner el cursor del display en una posición
-		* conocida y por lo tanto sincronizarlo con cadd.
-		* El constructor la inicializa y asegura su sincronismo.
-		*=====================================================*/
+	/*=====================================================
+	* Nota 1: cadd (cursor address) es una variable
+	* que contiene la dirección actual del cursor en el
+	* display+1. Esta variable es necesaria pues no podemos
+	* leer el LCD para saber dónde está el cursor. Mediante
+	* la funciones como lcdClear () o lcdSetCursorPosition()
+	* podemos poner el cursor del display en una posición
+	* conocida y por lo tanto sincronizarlo con cadd.
+	* El constructor la inicializa y asegura su sincronismo.
+	*=====================================================*/
 	int cadd;
-
-
 };

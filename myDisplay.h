@@ -1,14 +1,14 @@
 #pragma once
-#include "basicLCD.h"
-#include <iostream>
 
 #define DEBUG
 
+#include "basicLCD.h"
+#include <iostream>
+#include <string>
+
 #ifdef DEBUG
-void lcdWriteByteIR(BYTE by);
-void lcdWriteByteDR(BYTE by);
-void lcdWrtieNibble(BYTE by);
-#endif	//DEBUG
+#include "defines.h"
+#endif // DEBUG
 
 class myDisplay : public basicLCD
 {
@@ -18,16 +18,27 @@ public:
 	bool lcdInitOk();
 	FT_STATUS lcdGetError();
 	bool lcdClear();
+	bool lcdClearToEOL();
 	basicLCD & operator<<(const unsigned char c);
+	basicLCD & operator<<(const unsigned char * c);
 	bool lcdMoveCursorUp();
 	bool lcdMoveCursorDown();
 	bool lcdMoveCursorRight();
 	bool lcdMoveCursorLeft();
-	bool lcdSetCursorPosition();
+	bool lcdSetCursorPosition(const cursorPosition pos);
 	cursorPosition lcdGetCursorPosition();
-	void lcdUpdateCursor();
 
-private:
+#ifdef DEBUG
+	BYTE DDRAM[CHARXROW * ROWSXLINE * 2 + 1];
+	void printDDRAM();
+	void lcdWriteByteIR(BYTE by);
+	void lcdWriteByteDR(BYTE by);
+#endif // DEBUG
+
+protected:
+	void lcdUpdateCursor();
 	int cadd;
+	int getCursorRow();
+	int getCursorCol();
 };
 
