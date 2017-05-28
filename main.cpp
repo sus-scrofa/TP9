@@ -10,14 +10,17 @@ int main()
 	display->lcdMoveCursorRight();
 	display->printDDRAM();
 
-	const char * str = "EN EDA NADA ANDA";
+	const unsigned char str[] = "EN EDA NADA ANDA";
+	std::string s ("AHORA SOY STD::STRING");
 
-	*display << (const unsigned char)str;
+	*display << &str[0];
+	display->printDDRAM();
+	*display << s;
 	display->printDDRAM();
 	display->lcdMoveCursorDown();
 	display->printDDRAM();
 
-	getchar();
+	system("pause");
 }
 
 

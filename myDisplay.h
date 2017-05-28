@@ -21,6 +21,7 @@ public:
 	bool lcdClearToEOL();
 	basicLCD & operator<<(const unsigned char c);
 	basicLCD & operator<<(const unsigned char * c);
+	basicLCD & operator<<(std::string s);
 	bool lcdMoveCursorUp();
 	bool lcdMoveCursorDown();
 	bool lcdMoveCursorRight();

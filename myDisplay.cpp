@@ -3,6 +3,9 @@
 
 #define MAX_S_LEN 32
 
+#define	FIRST_ROW	0	//numero de fila de las dos que se ven en el lcd
+#define	SECOND_ROW	4
+
 myDisplay::myDisplay()
 {
 	cadd = 1;
@@ -67,6 +70,13 @@ basicLCD & myDisplay::operator<<(const unsigned char c)
 #ifdef DEBUG
 	std::cout << " operator << (" << c << ')' << std::endl;
 #endif // DEBUG
+	if (getCursorCol() == 0)	// si se cambio de columna, correr el cursor a la otra linea que se muestra
+	{
+		cursorPosition c = { FIRST_ROW,0 };
+		if (getCursorRow() == FIRST_ROW + 1) //si estoy en la fila 1 tengo que ir a la 2da linea, si no a la primera
+			c.row = SECOND_ROW;
+		lcdSetCursorPosition(c);
+	}
 	return *this;
 }
 
@@ -80,12 +90,51 @@ basicLCD & myDisplay::operator<<(const unsigned char * c)
 		sentence.erase(sentence.begin(), sentence.end() - CHARXROW * 2);	
 		len = MAX_S_LEN;
 	}
-	for (int i = 0; i < MAX_S_LEN; i++)
+	for (int i = 0; i < len; i++)
 	{
 		lcdWriteByteDR(sentence[i]);
+
+		if (getCursorCol() == 0)	// si se cambio de columna, correr el cursor a la otra linea que se muestra
+		{
+			cursorPosition c = { FIRST_ROW,0 };
+			if (getCursorRow() == FIRST_ROW + 1) //si estoy en la fila 1 tengo que ir a la 2da linea, si no a la primera
+				c.row = SECOND_ROW;
+			lcdSetCursorPosition(c);
+		}
 	}
 #ifdef DEBUG
 	std::cout << " operator << (" << c << ')' << std::endl;
+#endif	//DEBUG
+	return *this;
+}
+
+basicLCD & myDisplay::operator<<(std::string s)
+{
+	std::string sentence(s);	//copiar el string recibido para poder modificarlo
+	unsigned int len = sentence.size();
+	
+	if (len > MAX_S_LEN)	//si la longitud excede el limite
+	{
+		//solamente quedarse con los ultimos MAX_S_LEN caracteres
+		sentence.erase(sentence.begin(), sentence.end() - CHARXROW * 2);
+		len = MAX_S_LEN;
+	}
+	
+	for (int i = 0; i < len; i++)
+	{
+		lcdWriteByteDR(sentence[i]);
+		if (getCursorCol() == 0)	// si se cambio de columna, correr el cursor a la otra linea que se muestra
+		{
+			cursorPosition c = { FIRST_ROW,0 };
+			if (getCursorRow() == FIRST_ROW + 1) //si estoy en la fila 1 tengo que ir a la 2da linea, si no a la primera
+				c.row = SECOND_ROW;
+			lcdSetCursorPosition(c);
+		}
+	}
+
+	// TODO: insert return statement here
+#ifdef DEBUG
+	std::cout << " operator << (" << sentence << ')' << std::endl;
 #endif	//DEBUG
 	return *this;
 }
@@ -174,9 +223,16 @@ bool myDisplay::lcdMoveCursorLeft()
 
 bool myDisplay::lcdSetCursorPosition(const cursorPosition pos)
 {
-	cadd = pos.column + pos.row*CHARXROW;
-	lcdUpdateCursor();
-	return false;
+	if (pos.column<CHARXROW && pos.column>=0 && (pos.row==4 || pos.row==0))
+	//solo se puede mover el cursor a las posiciones que se muestran
+	{
+		cadd = pos.column + pos.row*CHARXROW + 1;
+		lcdUpdateCursor();
+
+		return true;
+	}
+	else
+		return false;
 }
 
 cursorPosition myDisplay::lcdGetCursorPosition()
@@ -227,8 +283,3 @@ void myDisplay::lcdWriteByteDR(BYTE by)
 	}
 }
 #endif // DEBUG
-
-/* NOTA 1
-* No se encontro en la cartilla que sucede cuando se debe incrementar 
-* la direccion del cursor y esta es la ultima de la DDRAM
-*/
