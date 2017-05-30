@@ -1,4 +1,14 @@
+#ifndef DEBUG
 #include "ftd2xx.h"
+#else
+
+typedef int FT_HANDLE;
+typedef int FT_STATUS;
+typedef char BYTE;
+#define FT_OK 0
+
+#endif // !DEBUG
+
 #include <iostream>
 
 struct cursorPosition

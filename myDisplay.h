@@ -6,9 +6,16 @@
 #include <iostream>
 #include <string>
 
+#include "definitionsLCD.h"
+
 #ifdef DEBUG
-#include "defines.h"
-#endif // DEBUG
+typedef int FT_HANDLE;
+typedef int FT_STATUS;
+typedef char BYTE;
+#define FT_OK 0
+#endif
+
+
 
 class myDisplay : public basicLCD
 {
@@ -32,8 +39,8 @@ public:
 #ifdef DEBUG
 	BYTE DDRAM[CHARXROW * ROWSXLINE * 2 + 1];
 	void printDDRAM();
-	void lcdWriteByteIR(BYTE by);
-	void lcdWriteByteDR(BYTE by);
+	FT_STATUS lcdWriteIR(FT_HANDLE * handler, BYTE by);
+	FT_STATUS lcdWriteDR(FT_HANDLE * handler, BYTE by);
 #endif // DEBUG
 
 protected:
@@ -41,5 +48,9 @@ protected:
 	int cadd;
 	int getCursorRow();
 	int getCursorCol();
+
+private:
+	FT_HANDLE * handler;
+	FT_STATUS lastError;
 };
 
