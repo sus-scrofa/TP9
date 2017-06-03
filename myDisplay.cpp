@@ -14,13 +14,12 @@ void closeLcd(FT_HANDLE * deviceHandler) { delete ((int*)deviceHandler); }
 
 
 
-
 myDisplay::myDisplay()
 {
 	cadd = 1;
 	handler = NULL;
 
-	for (unsigned int i = 0; i < 10 && handler == NULL; i++) {//pruebo 10 puertos hasta que uno funcione
+	for (unsigned int i = 1; i < 10 && handler == NULL; i++) {//pruebo 10 puertos hasta que uno funcione
 		handler = initLCD(i);
 	}
 
@@ -40,7 +39,8 @@ myDisplay::myDisplay()
 
 myDisplay::~myDisplay()
 {
-	closeLcd(handler);
+	if (handler != NULL)
+		closeLcd(handler);
 }
 
 bool myDisplay::lcdInitOk()
@@ -55,6 +55,9 @@ FT_STATUS myDisplay::lcdGetError()
 
 bool myDisplay::lcdClear()
 {
+	if (handler == NULL)
+		return false;
+	
 	lastError = lcdWriteIR(handler, LCD_CLEAR);
 	//actualiza el cursor automaticamente, no es necesario llamar a lcdUpdateCursor()
 #ifdef DEBUG
@@ -71,10 +74,14 @@ bool myDisplay::lcdClear()
 
 bool myDisplay::lcdClearToEOL()	
 {
+	if (handler == NULL)
+		return false;
+
 	int oldcadd = cadd;		//se debe mantener la direccion original del cursor
 	do
 	{	
 		lastError = lcdWriteDR(handler, ' ');
+		cadd++;
 	} while ((cadd % (CHARXROW + 1)) && lastError == FT_OK);
 
 	cadd = oldcadd;			
@@ -87,71 +94,45 @@ bool myDisplay::lcdClearToEOL()
 
 basicLCD & myDisplay::operator<<(const unsigned char c)
 {
-	lcdWriteDR(handler, c);
-#ifdef DEBUG
-	std::cout << " operator << (" << c << ')' << std::endl;
-#endif // DEBUG
-	if (getCursorCol() == 0)	// si se cambio de columna, correr el cursor a la otra linea que se muestra
-	{
-		cursorPosition c = { FIRST_ROW,0 };
-		if (getCursorRow() == FIRST_ROW + 1) //si estoy en la fila 1 tengo que ir a la 2da linea, si no a la primera
-			c.row = SECOND_ROW;
-		lastError = lcdSetCursorPosition(c);
-	}
+	if (handler != NULL) {
 
+		lastError = lcdWriteDR(handler, c);
+		nextPosition();	
+#ifdef DEBUG
+		std::cout << " operator << (" << c << ')' << std::endl;
+#endif // DEBUG
+	}
 	return *this;
 }
 
 basicLCD & myDisplay::operator<<(const unsigned char * c)
 {
-	std::string sentence((const char*)(c));
-	unsigned int len = sentence.size();
-	if (len > MAX_S_LEN)	//si la longitud excede el limite
-	{
-		//solamente quedarse con los ultimos MAX_S_LEN caracteres
-		sentence.erase(sentence.begin(), sentence.end() - CHARXROW * 2);	
-		len = MAX_S_LEN;
-	}
-	for (unsigned int i = 0; i < len && lastError == FT_OK; i++)
-	{
-		lastError = lcdWriteDR(handler, sentence[i]);
-
-		if (getCursorCol() == 0)	// si se cambio de columna, correr el cursor a la otra linea que se muestra
-		{
-			cursorPosition c = { FIRST_ROW,0 };
-			if (getCursorRow() == FIRST_ROW + 1) //si estoy en la fila 1 tengo que ir a la 2da linea, si no a la primera
-				c.row = SECOND_ROW;
-			lcdSetCursorPosition(c);
-		}
-	}
+	if (handler != NULL && c != NULL) {
+		std::string sentence((const char*)(c)); //hago lo mismo que para string
+		*this << sentence;
 #ifdef DEBUG
-	std::cout << " operator << (" << c << ')' << std::endl;
+		std::cout << " operator << (" << c << ')' << std::endl;
 #endif	//DEBUG
+	}
 	return *this;
 }
 
 basicLCD & myDisplay::operator<<(std::string s)
 {
-	std::string sentence(s);	//copiar el string recibido para poder modificarlo
-	unsigned int len = sentence.size();
+	unsigned int len = s.size();
 	
 	if (len > MAX_S_LEN)	//si la longitud excede el limite
 	{
 		//solamente quedarse con los ultimos MAX_S_LEN caracteres
-		sentence.erase(sentence.begin(), sentence.end() - CHARXROW * 2);
+		s.erase(s.begin(), s.end() - CHARXROW * 2);
 		len = MAX_S_LEN;
 	}
 	
-	for (unsigned int i = 0; i < len && lastError == FT_OK; i++)
+	for (unsigned int i = 0; i < len && lastError == FT_OK; i++) 
+	//escribo solo si no hubo error hasta ahora (notese que si habia error de antes no mando)
 	{
-		lastError = lcdWriteDR(handler, sentence[i]);
-		if (getCursorCol() == 0)	// si se cambio de columna, correr el cursor a la otra linea que se muestra
-		{
-			cursorPosition c = { FIRST_ROW,0 };
-			if (getCursorRow() == FIRST_ROW + 1) //si estoy en la fila 1 tengo que ir a la 2da linea, si no a la primera
-				c.row = SECOND_ROW;
-			lcdSetCursorPosition(c);
-		}
+		lastError = lcdWriteDR(handler, s[i]);
+		nextPosition();
 	}
 
 #ifdef DEBUG
@@ -167,14 +148,12 @@ bool myDisplay::lcdMoveCursorUp()
 #endif // DEBUG
 	bool valid = false;
 	//Mover solamente si no se encuentra en la primera fila
-	if (getCursorRow())	
+	if (handler != NULL && getCursorRow() == SECOND_ROW)
 	{
-		if (!(cadd %= CHARXROW))	//si se encuentra en la ultima columna, cadd va a ser 0 cuando en realidad deberia ser CHARXROW
-		{
-			cadd = CHARXROW;
-		}
+		cursorPosition c = { FIRST_ROW, getCursorCol() };
+		lastError =!lcdSetCursorPosition(c);
 		lcdUpdateCursor();
-		valid =  true;
+		valid =  !lastError;
 	}
 
 	return valid;
@@ -186,16 +165,13 @@ bool myDisplay::lcdMoveCursorDown()
 	std::cout << "lcdMoveCursorDown()" << std::endl;
 #endif // DEBUG
 	bool valid = false;
-	//Mover solamente si no se encuentra en la ultima fila
-	if (getCursorRow() != ROWSXLINE)
+	//Mover solamente si se encuentra en la ultima fila
+	if (handler != NULL && getCursorRow() == FIRST_ROW)
 	{
-		if (!(cadd %= CHARXROW))	
-		{
-			cadd += CHARXROW;		// si se encuentra en la ultima columna, cadd va a ser 0 cuando en realidad deberia ser CHARXROW
-		}
-		cadd += CHARXROW*ROWSXLINE;
+		cursorPosition c = { SECOND_ROW, getCursorCol() };
+		lastError = !lcdSetCursorPosition(c);
 		lcdUpdateCursor();
-		valid = true;
+		valid = !lastError;
 	}
 	
 	return valid;
@@ -208,7 +184,7 @@ bool myDisplay::lcdMoveCursorRight()
 #endif // DEBUG
 	bool valid = false;
 	//Mover solamente si no se encuentra en la ultima columna
-	if (getCursorCol() < CHARXROW - 1)
+	if (handler != NULL && getCursorCol() < CHARXROW - 1)
 	{
 		cadd++;
 		lcdUpdateCursor();
@@ -226,7 +202,7 @@ bool myDisplay::lcdMoveCursorLeft()
 	//Mover solamente si no se encuentra en la primer columna
 	bool valid = false;
 
-	if (getCursorCol())	
+	if (handler != NULL && getCursorCol())
 	{
 		cadd--;
 		lcdUpdateCursor();
@@ -240,7 +216,7 @@ bool myDisplay::lcdSetCursorPosition(const cursorPosition pos)
 {
 	bool valid = false;
 
-	if (pos.column<CHARXROW && pos.column>=0 && (pos.row==4 || pos.row==0))
+	if (handler != NULL && pos.column<CHARXROW && pos.column>=0 && (pos.row==SECOND_ROW || pos.row==FIRST_ROW))
 	//solo se puede mover el cursor a las posiciones que se muestran
 	{
 		cadd = pos.column + pos.row*CHARXROW + 1;
@@ -261,7 +237,8 @@ cursorPosition myDisplay::lcdGetCursorPosition()
 
 void myDisplay::lcdUpdateCursor()
 {
-	lastError = lcdWriteIR(handler, LCD_SETDDR | cadd - 1);	//TODO: borrar magic number
+	if(handler != NULL)
+		lastError = lcdWriteIR(handler, LCD_SETDDR | cadd - 1);
 }
 
 int myDisplay::getCursorRow()
@@ -271,7 +248,7 @@ int myDisplay::getCursorRow()
 
 int myDisplay::getCursorCol()
 {
-	return ((cadd - 1) % 0x10);
+	return ((cadd - 1) % CHARXROW);
 }
 
 #ifdef DEBUG
@@ -302,3 +279,16 @@ FT_STATUS myDisplay::lcdWriteDR(FT_HANDLE * handler, BYTE by)
 	return FT_OK;
 }
 #endif // DEBUG
+
+
+void myDisplay :: nextPosition()
+{
+	cadd++;
+	if (getCursorCol() == 0)	// si se cambio de columna, correr el cursor a la otra linea que se muestra
+	{
+		cursorPosition c = { FIRST_ROW,0 };
+		if (getCursorRow() == FIRST_ROW + 1) //si estoy en la fila 1 tengo que ir a la 2da linea, si no a la primera
+			c.row = SECOND_ROW;
+		lastError = !lcdSetCursorPosition(c);
+	}
+}

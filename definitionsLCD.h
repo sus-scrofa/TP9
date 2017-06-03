@@ -53,5 +53,8 @@
 
 #define SET_ADDRESS(a,b)	(LCD_SETDDR + (a) + (b) * 0x40)
 
-#define CHARXROW			0x10		//Ancho del display
-#define ROWSXLINE			4			//filas de DDRAM asignadas a una linea del display
+#define CHARXROW			16		//Ancho del display
+#define ROWSXLINE			4		//filas de DDRAM asignadas a una linea del display
+
+#define	FIRST_ROW	0	//numero de fila de las dos que se ven en el lcd
+#define	SECOND_ROW	4

@@ -1,12 +1,13 @@
 #pragma once
 
-#define DEBUG
+//#define DEBUG
 
 #include "basicLCD.h"
 #include <iostream>
 #include <string>
 
 #include "definitionsLCD.h"
+
 
 #ifdef DEBUG
 typedef int FT_HANDLE;
@@ -48,6 +49,7 @@ protected:
 	int cadd;
 	int getCursorRow();
 	int getCursorCol();
+	void nextPosition();
 
 private:
 	FT_HANDLE * handler;
